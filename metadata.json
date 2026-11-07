@@ -1,0 +1,6 @@
+{
+  "name": "HyperClone - Phone Clone & Mega Storage",
+  "description": "Aplikasi Clone Phone modern dengan transfer data nirkabel super cepat, manajemen data perangkat lengkap, dan brankas penyimpanan virtual ultra-besar 5 TB.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
