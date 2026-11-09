@@ -4,6 +4,8 @@ import {
   addStoredFile,
   deleteStoredFile,
   renameStoredFile,
+  toggleHideStoredFile,
+  toggleHideApp,
   addContact,
   deleteContact,
   sendChatMessage,
@@ -33,6 +35,8 @@ import { FilePreviewModal } from './components/FilePreviewModal';
 import { MediaHub } from './components/MediaHub';
 import { GoogleSyncModal } from './components/GoogleSyncModal';
 import { FacebookLoginModal } from './components/FacebookLoginModal';
+import { GamePlayerModal, GameKey } from './components/GamePlayerModal';
+import { HiddenVaultModal } from './components/HiddenVaultModal';
 import { initAuth } from './utils/googleAuth';
 import {
   FacebookUserProfile,
@@ -53,6 +57,7 @@ import {
   Film,
   Music,
   Image as ImageIcon,
+  Lock,
 } from 'lucide-react';
 
 export default function App() {
@@ -86,6 +91,10 @@ export default function App() {
   const [isBackupRestoreOpen, setIsBackupRestoreOpen] = useState(false);
   const [isGoogleSyncOpen, setIsGoogleSyncOpen] = useState(false);
   const [previewFile, setPreviewFile] = useState<StoredFileItem | null>(null);
+  const [isVaultOpen, setIsVaultOpen] = useState(false);
+  const [isGamePlayerOpen, setIsGamePlayerOpen] = useState(false);
+  const [activeGameTitle, setActiveGameTitle] = useState('Galaxy Space Raider Arcade');
+  const [activeGameKey, setActiveGameKey] = useState<GameKey>('space_shooter');
 
   // Auth state
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -278,6 +287,35 @@ export default function App() {
     return res.reclaimedBytes;
   };
 
+  // Secret Vault: Hide/Unhide File
+  const handleToggleHideFile = async (id: string, isHidden: boolean) => {
+    const updated = await toggleHideStoredFile(id, isHidden);
+    setFiles([...updated]);
+    showToast(
+      isHidden
+        ? 'Berkas dipindahkan ke Brankas Rahasia (Terlindungi PIN)!'
+        : 'Berkas dikembalikan ke daftar umum.'
+    );
+  };
+
+  // Secret Vault: Hide/Unhide App/Game
+  const handleToggleHideApp = async (id: string, isHidden: boolean) => {
+    const updated = await toggleHideApp(id, isHidden);
+    setApps([...updated]);
+    showToast(
+      isHidden
+        ? 'Aplikasi/Game disembunyikan di Brankas Rahasia!'
+        : 'Aplikasi/Game dikembalikan ke daftar umum.'
+    );
+  };
+
+  // Play Game in Interactive Engine
+  const handlePlayGame = (gameTitle: string, gameKey?: GameKey) => {
+    setActiveGameTitle(gameTitle);
+    setActiveGameKey(gameKey || 'space_shooter');
+    setIsGamePlayerOpen(true);
+  };
+
   // Clone success handler
   const handleCloneSuccess = async (summary: {
     itemsCount: number;
@@ -334,8 +372,8 @@ export default function App() {
         onOpenCloneWizard={() => setIsCloneWizardOpen(true)}
         onOpenCleaner={() => setIsCleanerOpen(true)}
         onOpenBackupRestore={() => setIsBackupRestoreOpen(true)}
-        onOpenGoogleSync={() => setIsGoogleSyncOpen(true)}
         onOpenFacebookLogin={() => setIsFacebookLoginOpen(true)}
+        onOpenVault={() => setIsVaultOpen(true)}
       />
 
       {/* Main Container */}
@@ -414,6 +452,14 @@ export default function App() {
               <Smartphone className="h-4 w-4" />
               <span>Konten Ponsel (Kontak, Pesan, Aplikasi)</span>
             </button>
+
+            <button
+              onClick={() => setIsVaultOpen(true)}
+              className="flex items-center space-x-2 rounded-xl border border-purple-500/30 bg-purple-950/30 px-4 py-2 text-purple-300 hover:bg-purple-900/40 hover:text-white transition-all shrink-0"
+            >
+              <Lock className="h-4 w-4 text-purple-400" />
+              <span>Brankas Rahasia (PIN Lock)</span>
+            </button>
           </div>
 
           <div className="flex items-center space-x-3 text-xs text-slate-400">
@@ -439,6 +485,9 @@ export default function App() {
               onDeleteFile={handleDeleteFile}
               onRenameFile={handleRenameFile}
               onPreviewFile={(f) => setPreviewFile(f)}
+              onToggleHideFile={handleToggleHideFile}
+              onPlayGame={handlePlayGame}
+              onOpenVault={() => setIsVaultOpen(true)}
             />
           </section>
         )}
@@ -464,6 +513,8 @@ export default function App() {
               onAddContact={handleAddContact}
               onDeleteContact={handleDeleteContact}
               onSendMessage={handleSendMessage}
+              onPlayGame={handlePlayGame}
+              onToggleHideApp={handleToggleHideApp}
               onOpenGoogleSync={() => setIsGoogleSyncOpen(true)}
             />
           </section>
@@ -517,6 +568,27 @@ export default function App() {
       <FilePreviewModal
         file={previewFile}
         onClose={() => setPreviewFile(null)}
+        onPlayGame={handlePlayGame}
+        onToggleHideFile={handleToggleHideFile}
+      />
+
+      <HiddenVaultModal
+        isOpen={isVaultOpen}
+        onClose={() => setIsVaultOpen(false)}
+        files={files}
+        apps={apps}
+        onToggleHideFile={handleToggleHideFile}
+        onToggleHideApp={handleToggleHideApp}
+        onPreviewFile={(f) => setPreviewFile(f)}
+        onPlayGame={handlePlayGame}
+        showToast={showToast}
+      />
+
+      <GamePlayerModal
+        isOpen={isGamePlayerOpen}
+        onClose={() => setIsGamePlayerOpen(false)}
+        gameTitle={activeGameTitle}
+        initialGame={activeGameKey}
       />
 
       <GoogleSyncModal

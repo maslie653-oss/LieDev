@@ -25,7 +25,7 @@ import {
   AlertCircle,
   CheckCircle2,
 } from 'lucide-react';
-import { StoredFileItem, formatBytes, resolveVideoPlaybackUrl } from '../utils/storageEngine';
+import { StoredFileItem, formatBytes, resolveVideoPlaybackUrl, resolveAudioPlaybackUrl } from '../utils/storageEngine';
 import { PhotoLightboxModal } from './PhotoLightboxModal';
 
 interface MediaHubProps {
@@ -64,10 +64,10 @@ export const MediaHub: React.FC<MediaHubProps> = ({ files, onUploadMedia }) => {
 
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  // Filter media files
-  const photos = files.filter((f) => f.category === 'photos');
-  const videos = files.filter((f) => f.category === 'videos');
-  const audioTracks = files.filter((f) => f.category === 'audio');
+  // Filter media files (exclude hidden files from public gallery)
+  const photos = files.filter((f) => f.category === 'photos' && !f.isHidden);
+  const videos = files.filter((f) => f.category === 'videos' && !f.isHidden);
+  const audioTracks = files.filter((f) => f.category === 'audio' && !f.isHidden);
 
   // Filtered photos by album
   const filteredPhotos = photos.filter((p) => {
@@ -268,7 +268,7 @@ export const MediaHub: React.FC<MediaHubProps> = ({ files, onUploadMedia }) => {
       {/* Hidden Audio Element */}
       <audio
         ref={audioRef}
-        src={activeAudio?.blobData || 'https://actions.google.com/sounds/v1/ambient/rain_heavy.ogg'}
+        src={resolveAudioPlaybackUrl(activeAudio)}
         onTimeUpdate={handleAudioTimeUpdate}
         onEnded={handleAudioEnded}
         loop={isLooping}

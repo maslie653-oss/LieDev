@@ -7,6 +7,7 @@ import {
   calculateTransferMetrics,
   validateBackupSchema,
   resolveVideoPlaybackUrl,
+  resolveAudioPlaybackUrl,
   TOTAL_MEGA_STORAGE_BYTES,
   StoredFileItem,
 } from './storageEngine';
@@ -155,4 +156,38 @@ test('resolveVideoPlaybackUrl provides verified fallback for broken 403 endpoint
     blobData: 'blob:http://localhost:3000/123-abc-video',
   };
   assert.equal(resolveVideoPlaybackUrl(uploadedVideo), 'blob:http://localhost:3000/123-abc-video');
+});
+
+test('resolveAudioPlaybackUrl provides verified local fallback for broken endpoints', () => {
+  // Test broken actions.google.com endpoint
+  const brokenAudio = {
+    id: 'f6',
+    name: 'AUD_Studio_Master_Flac_HiRes_Album.mp3',
+    blobData: 'https://actions.google.com/sounds/v1/ambient/rain_heavy.ogg',
+  };
+  assert.equal(resolveAudioPlaybackUrl(brokenAudio), '/audio/studio_master_symphony.mp3');
+
+  // Test LoFi
+  const lofiAudio = {
+    id: 'f7_b',
+    name: 'AUD_LoFi_Chill_Beats_Work_Session.mp3',
+    blobData: 'https://actions.google.com/sounds/v1/water/stream_water.ogg',
+  };
+  assert.equal(resolveAudioPlaybackUrl(lofiAudio), '/audio/lofi_chill_beats.mp3');
+
+  // Test Voice Memo
+  const voiceMemo = {
+    id: 'f7',
+    name: 'AUD_Voice_Memo_Meeting_Rencana_Ekspansi.mp3',
+    blobData: 'https://actions.google.com/sounds/v1/ambiences/coffee_shop.ogg',
+  };
+  assert.equal(resolveAudioPlaybackUrl(voiceMemo), '/audio/voice_memo_meeting.mp3');
+
+  // Test real user upload preserves valid audio blobData
+  const uploadedAudio = {
+    id: 'audio_up_1',
+    name: 'my_song.mp3',
+    blobData: 'blob:http://localhost:3000/my-audio-file',
+  };
+  assert.equal(resolveAudioPlaybackUrl(uploadedAudio), 'blob:http://localhost:3000/my-audio-file');
 });

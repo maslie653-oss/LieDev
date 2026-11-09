@@ -10,15 +10,27 @@ import {
   Image as ImageIcon,
   Layers,
   Sparkles,
+  Gamepad2,
+  Play,
+  Lock,
+  Unlock,
 } from 'lucide-react';
-import { StoredFileItem, formatBytes, resolveVideoPlaybackUrl } from '../utils/storageEngine';
+import { StoredFileItem, formatBytes, resolveVideoPlaybackUrl, resolveAudioPlaybackUrl } from '../utils/storageEngine';
+import { GameKey } from './GamePlayerModal';
 
 interface FilePreviewModalProps {
   file: StoredFileItem | null;
   onClose: () => void;
+  onPlayGame?: (gameTitle: string, gameKey?: GameKey) => void;
+  onToggleHideFile?: (id: string, isHidden: boolean) => void;
 }
 
-export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ file, onClose }) => {
+export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
+  file,
+  onClose,
+  onPlayGame,
+  onToggleHideFile,
+}) => {
   if (!file) return null;
 
   const handleDownload = () => {
@@ -42,6 +54,8 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ file, onClos
     }
   };
 
+  const isApkOrGame = file.category === 'apps' || file.name.endsWith('.apk') || file.isGame;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
       <div className="relative w-full max-w-2xl overflow-hidden rounded-3xl border border-slate-800 bg-slate-900 shadow-2xl flex flex-col max-h-[90vh]">
@@ -55,14 +69,21 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ file, onClos
                 <Film className="h-5 w-5" />
               ) : file.category === 'audio' ? (
                 <Music className="h-5 w-5" />
-              ) : file.category === 'apps' ? (
-                <Layers className="h-5 w-5" />
+              ) : isApkOrGame ? (
+                <Gamepad2 className="h-5 w-5 text-emerald-400" />
               ) : (
                 <FileText className="h-5 w-5" />
               )}
             </div>
             <div className="overflow-hidden">
-              <h3 className="text-sm font-bold text-white truncate">{file.name}</h3>
+              <div className="flex items-center space-x-2">
+                <h3 className="text-sm font-bold text-white truncate">{file.name}</h3>
+                {file.isHidden && (
+                  <span className="rounded-full bg-purple-500/20 border border-purple-500/40 px-2 py-0.5 text-[9px] font-bold text-purple-300">
+                    Tersembunyi
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-slate-400 font-mono">
                 {formatBytes(file.size)} • {file.type || 'Berkas Terarsip'}
               </p>
@@ -70,6 +91,19 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ file, onClos
           </div>
 
           <div className="flex items-center space-x-2">
+            {onToggleHideFile && (
+              <button
+                onClick={() => onToggleHideFile(file.id, !file.isHidden)}
+                title={file.isHidden ? 'Keluarkan dari Brankas Rahasia' : 'Sembunyikan ke Brankas Rahasia'}
+                className={`rounded-xl p-2 text-xs font-semibold transition-all ${
+                  file.isHidden
+                    ? 'bg-purple-900/40 text-purple-300 border border-purple-500/40'
+                    : 'text-slate-400 hover:bg-slate-800 hover:text-purple-300'
+                }`}
+              >
+                {file.isHidden ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+              </button>
+            )}
             <button
               onClick={handleDownload}
               title="Unduh Berkas"
@@ -120,10 +154,35 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ file, onClos
               <audio
                 controls
                 className="w-full mt-2"
-                src={file.blobData || 'https://actions.google.com/sounds/v1/ambient/rain_heavy.ogg'}
+                src={resolveAudioPlaybackUrl(file)}
               >
                 Browser Anda tidak mendukung tag audio.
               </audio>
+            </div>
+          ) : isApkOrGame ? (
+            <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/20 p-6 text-center space-y-4">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-cyan-500 text-slate-950 shadow-lg">
+                <Gamepad2 className="h-8 w-8" />
+              </div>
+              <div>
+                <h4 className="text-base font-bold text-white">{file.name}</h4>
+                <p className="text-xs text-emerald-300 mt-1">
+                  Paket APK Game / Aplikasi Terpasang — Siap Dimainkan Langsung
+                </p>
+              </div>
+
+              {onPlayGame && (
+                <button
+                  onClick={() => {
+                    onClose();
+                    onPlayGame(file.name, file.gameType || 'space_shooter');
+                  }}
+                  className="inline-flex items-center space-x-2 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 px-6 py-3 text-xs font-bold text-slate-950 shadow-lg shadow-emerald-500/25 hover:brightness-110 active:scale-95 transition-all"
+                >
+                  <Play className="h-4 w-4 fill-current" />
+                  <span>Mainkan Game Ini Sekarang (Emulator 60 FPS)</span>
+                </button>
+              )}
             </div>
           ) : (
             <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-8 text-center space-y-3">

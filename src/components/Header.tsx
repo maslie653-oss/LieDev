@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   Smartphone,
   HardDrive,
@@ -10,11 +9,10 @@ import {
   ShieldCheck,
   Download,
   Trash2,
+  Lock,
 } from 'lucide-react';
 import { DeviceProfile } from '../utils/storageEngine';
-
 import { User } from 'firebase/auth';
-import { Cloud } from 'lucide-react';
 
 interface HeaderProps {
   profile: DeviceProfile;
@@ -26,8 +24,9 @@ interface HeaderProps {
   onOpenCloneWizard: () => void;
   onOpenCleaner: () => void;
   onOpenBackupRestore: () => void;
-  onOpenGoogleSync: () => void;
+  onOpenGoogleSync?: () => void;
   onOpenFacebookLogin: () => void;
+  onOpenVault: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -42,6 +41,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenBackupRestore,
   onOpenGoogleSync,
   onOpenFacebookLogin,
+  onOpenVault,
 }) => {
   return (
     <header className="sticky top-0 z-30 border-b border-cyan-500/20 bg-slate-950/85 backdrop-blur-md">
@@ -172,24 +172,15 @@ export const Header: React.FC<HeaderProps> = ({
             </span>
           </button>
 
-          {/* Google Workspace Smart Sync Button */}
+          {/* Secret Vault (Brankas Rahasia) PIN Button */}
           <button
-            onClick={onOpenGoogleSync}
-            aria-label="Sinkronisasi Akun Google"
-            className="flex items-center space-x-1.5 rounded-xl border border-cyan-500/30 bg-cyan-950/30 px-3 py-2 text-xs font-medium text-cyan-300 transition-all hover:border-cyan-400/50 hover:bg-cyan-900/40 active:scale-95"
+            onClick={onOpenVault}
+            aria-label="Buka Brankas Rahasia Terenkripsi"
+            className="flex items-center space-x-1.5 rounded-xl border border-purple-500/40 bg-purple-950/40 px-3 py-2 text-xs font-semibold text-purple-300 transition-all hover:bg-purple-900/50 hover:border-purple-400/60 active:scale-95 shadow-md shadow-purple-950/30"
           >
-            {currentUser?.photoURL ? (
-              <img
-                src={currentUser.photoURL}
-                alt="Google User"
-                className="h-3.5 w-3.5 rounded-full ring-1 ring-cyan-400"
-              />
-            ) : (
-              <Cloud className="h-3.5 w-3.5 text-cyan-400" />
-            )}
-            <span className="hidden md:inline">
-              {currentUser ? (currentUser.displayName?.split(' ')[0] || 'Google') : 'Google Sync'}
-            </span>
+            <Lock className="h-3.5 w-3.5 text-purple-400" />
+            <span className="hidden sm:inline">Brankas Rahasia</span>
+            <span className="hidden xl:inline text-[10px] text-purple-400 font-mono">(PIN)</span>
           </button>
 
           {/* Primary Action: Launch Phone Clone Wizard */}

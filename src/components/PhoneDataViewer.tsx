@@ -16,9 +16,14 @@ import {
   ShieldCheck,
   Phone,
   Mail,
+  Gamepad2,
+  Play,
+  Lock,
+  Unlock,
 } from 'lucide-react';
 import { ContactItem, MessageItem, AppItem, formatBytes } from '../utils/storageEngine';
 import { CloneSessionLog } from '../utils/indexedDb';
+import { GameKey } from './GamePlayerModal';
 
 interface PhoneDataViewerProps {
   contacts: ContactItem[];
@@ -28,6 +33,8 @@ interface PhoneDataViewerProps {
   onAddContact: (contact: ContactItem) => void;
   onDeleteContact: (id: string) => void;
   onSendMessage: (threadId: string, text: string) => void;
+  onPlayGame?: (gameTitle: string, gameKey?: GameKey) => void;
+  onToggleHideApp?: (id: string, isHidden: boolean) => void;
   onOpenGoogleSync?: () => void;
 }
 
@@ -39,6 +46,8 @@ export const PhoneDataViewer: React.FC<PhoneDataViewerProps> = ({
   onAddContact,
   onDeleteContact,
   onSendMessage,
+  onPlayGame,
+  onToggleHideApp,
   onOpenGoogleSync,
 }) => {
   const [activeTab, setActiveTab] = useState<'contacts' | 'messages' | 'apps' | 'history'>('contacts');
@@ -75,9 +84,9 @@ export const PhoneDataViewer: React.FC<PhoneDataViewerProps> = ({
 
   const activeThread = messages.find((m) => m.id === selectedThreadId) || messages[0];
 
-  // Filtered apps
+  // Filtered apps (exclude hidden apps from public list)
   const filteredApps = apps.filter((a) =>
-    a.name.toLowerCase().includes(appSearch.toLowerCase())
+    !a.isHidden && a.name.toLowerCase().includes(appSearch.toLowerCase())
   );
 
   // Export Contacts to real .vcf file
@@ -491,23 +500,52 @@ export const PhoneDataViewer: React.FC<PhoneDataViewerProps> = ({
               {filteredApps.map((app) => (
                 <div
                   key={app.id}
-                  className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4 transition-all hover:border-slate-700 hover:bg-slate-850"
+                  className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4 transition-all hover:border-slate-700 hover:bg-slate-850 flex flex-col justify-between"
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-800 text-cyan-400 border border-slate-700">
-                      <Layers className="h-6 w-6" />
+                  <div>
+                    <div className="flex items-start justify-between">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-800 text-cyan-400 border border-slate-700">
+                        {app.isGame || app.category.includes('Game') ? (
+                          <Gamepad2 className="h-6 w-6 text-emerald-400" />
+                        ) : (
+                          <Layers className="h-6 w-6" />
+                        )}
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        {onToggleHideApp && (
+                          <button
+                            onClick={() => onToggleHideApp(app.id, true)}
+                            title="Sembunyikan ke Brankas Rahasia"
+                            className="rounded-lg p-1 text-slate-500 hover:bg-purple-950/40 hover:text-purple-300 transition-colors"
+                          >
+                            <Lock className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                        <span className="rounded-full bg-cyan-500/10 px-2 py-0.5 text-[9px] font-semibold text-cyan-400">
+                          v{app.version}
+                        </span>
+                      </div>
                     </div>
-                    <span className="rounded-full bg-cyan-500/10 px-2 py-0.5 text-[9px] font-semibold text-cyan-400">
-                      v{app.version}
-                    </span>
+
+                    <h4 className="mt-3 text-xs font-bold text-white truncate">{app.name}</h4>
+                    <div className="text-[10px] text-slate-500 font-mono truncate">{app.packageName}</div>
                   </div>
 
-                  <h4 className="mt-3 text-xs font-bold text-white truncate">{app.name}</h4>
-                  <div className="text-[10px] text-slate-500 font-mono truncate">{app.packageName}</div>
+                  <div className="mt-3 pt-2 border-t border-slate-800/80 space-y-2">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-slate-400">APK: {formatBytes(app.size)}</span>
+                      <span className="text-cyan-400 font-semibold">Data: {formatBytes(app.dataSize)}</span>
+                    </div>
 
-                  <div className="mt-3 flex items-center justify-between text-[11px] pt-2 border-t border-slate-800/80">
-                    <span className="text-slate-400">APK: {formatBytes(app.size)}</span>
-                    <span className="text-cyan-400 font-semibold">Data: {formatBytes(app.dataSize)}</span>
+                    {(app.isGame || app.category.includes('Game')) && onPlayGame && (
+                      <button
+                        onClick={() => onPlayGame(app.name, app.gameType || 'space_shooter')}
+                        className="w-full flex items-center justify-center space-x-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 py-1.5 text-xs font-bold text-slate-950 shadow-md hover:brightness-110 active:scale-95 transition-all"
+                      >
+                        <Play className="h-3.5 w-3.5 fill-current" />
+                        <span>Mainkan Game</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}

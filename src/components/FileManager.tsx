@@ -19,8 +19,14 @@ import {
   Plus,
   Check,
   AlertTriangle,
+  Lock,
+  Unlock,
+  Gamepad2,
+  Play,
+  FolderLock,
 } from 'lucide-react';
 import { StoredFileItem, formatBytes } from '../utils/storageEngine';
+import { GameKey } from './GamePlayerModal';
 
 interface FileManagerProps {
   files: StoredFileItem[];
@@ -30,6 +36,9 @@ interface FileManagerProps {
   onDeleteFile: (id: string) => void;
   onRenameFile: (id: string, newName: string) => void;
   onPreviewFile: (file: StoredFileItem) => void;
+  onToggleHideFile?: (id: string, isHidden: boolean) => void;
+  onPlayGame?: (gameTitle: string, gameKey?: GameKey) => void;
+  onOpenVault?: () => void;
 }
 
 export const FileManager: React.FC<FileManagerProps> = ({
@@ -40,6 +49,9 @@ export const FileManager: React.FC<FileManagerProps> = ({
   onDeleteFile,
   onRenameFile,
   onPreviewFile,
+  onToggleHideFile,
+  onPlayGame,
+  onOpenVault,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -50,8 +62,9 @@ export const FileManager: React.FC<FileManagerProps> = ({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Filter files by category & search query
+  // Filter files by category & search query (exclude hidden files from public view)
   const filteredFiles = files.filter((f) => {
+    if (f.isHidden) return false;
     const matchesCategory =
       selectedCategory === 'all' ||
       selectedCategory === 'free' ||
@@ -360,27 +373,53 @@ export const FileManager: React.FC<FileManagerProps> = ({
 
               {/* Action Buttons Toolbar */}
               <div className="flex items-center justify-between pt-3 mt-3 border-t border-slate-800/80 text-slate-400">
-                <button
-                  onClick={() => onPreviewFile(file)}
-                  title="Lihat Pratinjau"
-                  className="rounded-lg p-1.5 hover:bg-slate-800 hover:text-cyan-300 transition-colors"
-                >
-                  <Eye className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  onClick={() => handleDownload(file)}
-                  title="Unduh Berkas"
-                  className="rounded-lg p-1.5 hover:bg-slate-800 hover:text-cyan-300 transition-colors"
-                >
-                  <Download className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  onClick={() => startRename(file)}
-                  title="Ganti Nama"
-                  className="rounded-lg p-1.5 hover:bg-slate-800 hover:text-amber-300 transition-colors"
-                >
-                  <Edit2 className="h-3.5 w-3.5" />
-                </button>
+                <div className="flex items-center space-x-1">
+                  <button
+                    onClick={() => onPreviewFile(file)}
+                    title="Lihat Pratinjau"
+                    className="rounded-lg p-1.5 hover:bg-slate-800 hover:text-cyan-300 transition-colors"
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                  </button>
+
+                  {/* Play Game Button if APK or Game */}
+                  {(file.category === 'apps' || file.name.endsWith('.apk') || file.isGame) && onPlayGame && (
+                    <button
+                      onClick={() => onPlayGame(file.name, file.gameType || 'space_shooter')}
+                      title="Mainkan Game Ini (Emulator)"
+                      className="rounded-lg p-1.5 bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 transition-colors"
+                    >
+                      <Gamepad2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+
+                  {/* Hide to Vault Button */}
+                  {onToggleHideFile && (
+                    <button
+                      onClick={() => onToggleHideFile(file.id, true)}
+                      title="Sembunyikan ke Brankas Rahasia"
+                      className="rounded-lg p-1.5 hover:bg-purple-950/40 hover:text-purple-300 transition-colors"
+                    >
+                      <Lock className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => handleDownload(file)}
+                    title="Unduh Berkas"
+                    className="rounded-lg p-1.5 hover:bg-slate-800 hover:text-cyan-300 transition-colors"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={() => startRename(file)}
+                    title="Ganti Nama"
+                    className="rounded-lg p-1.5 hover:bg-slate-800 hover:text-amber-300 transition-colors"
+                  >
+                    <Edit2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+
                 <button
                   onClick={() => onDeleteFile(file.id)}
                   title="Hapus Berkas"
@@ -438,24 +477,49 @@ export const FileManager: React.FC<FileManagerProps> = ({
                       <div className="flex items-center justify-end space-x-1">
                         <button
                           onClick={() => onPreviewFile(file)}
+                          title="Lihat Pratinjau"
                           className="rounded-lg p-1.5 hover:bg-slate-800 hover:text-cyan-300"
                         >
                           <Eye className="h-3.5 w-3.5" />
                         </button>
+
+                        {(file.category === 'apps' || file.name.endsWith('.apk') || file.isGame) && onPlayGame && (
+                          <button
+                            onClick={() => onPlayGame(file.name, file.gameType || 'space_shooter')}
+                            title="Mainkan Game Ini (Emulator)"
+                            className="rounded-lg p-1.5 bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30"
+                          >
+                            <Gamepad2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+
+                        {onToggleHideFile && (
+                          <button
+                            onClick={() => onToggleHideFile(file.id, true)}
+                            title="Sembunyikan ke Brankas Rahasia"
+                            className="rounded-lg p-1.5 hover:bg-purple-950/40 hover:text-purple-300"
+                          >
+                            <Lock className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+
                         <button
                           onClick={() => handleDownload(file)}
+                          title="Unduh Berkas"
                           className="rounded-lg p-1.5 hover:bg-slate-800 hover:text-cyan-300"
                         >
                           <Download className="h-3.5 w-3.5" />
                         </button>
                         <button
                           onClick={() => startRename(file)}
+                          title="Ganti Nama"
                           className="rounded-lg p-1.5 hover:bg-slate-800 hover:text-amber-300"
                         >
                           <Edit2 className="h-3.5 w-3.5" />
                         </button>
                         <button
                           onClick={() => onDeleteFile(file.id)}
+                          title="Hapus Berkas"
                           className="rounded-lg p-1.5 hover:bg-rose-950/40 hover:text-rose-400"
                         >
                           <Trash2 className="h-3.5 w-3.5" />

@@ -87,7 +87,7 @@ export async function initStorage(): Promise<{
     // Check files
     const storedFiles = await getAllFromStore<StoredFileItem>(db, 'files');
     if (storedFiles.length > 0) {
-      // Auto-migrate broken 403 video URLs to local verified MP4 assets
+      // Auto-migrate broken 403 video URLs and 404 audio URLs to local verified assets
       let hasMigrated = false;
       const updatedFiles = storedFiles.map((file) => {
         if (
@@ -101,6 +101,19 @@ export async function initStorage(): Promise<{
             return { ...file, blobData: '/videos/konser_live_music.mp4' };
           } else {
             return { ...file, blobData: '/videos/nature_timelapse_4k.mp4' };
+          }
+        }
+        if (
+          file.category === 'audio' &&
+          (!file.blobData || file.blobData.includes('actions.google.com'))
+        ) {
+          hasMigrated = true;
+          if (file.id === 'f6' || file.name.includes('Studio') || file.name.includes('Symphony')) {
+            return { ...file, blobData: '/audio/studio_master_symphony.mp3' };
+          } else if (file.id === 'f7_b' || file.name.includes('LoFi') || file.name.includes('Chill')) {
+            return { ...file, blobData: '/audio/lofi_chill_beats.mp3' };
+          } else {
+            return { ...file, blobData: '/audio/voice_memo_meeting.mp3' };
           }
         }
         return file;
@@ -243,6 +256,24 @@ export async function renameStoredFile(id: string, newName: string): Promise<Sto
     await putItem('files', updated);
   }
   return memoryFiles;
+}
+
+export async function toggleHideStoredFile(id: string, isHidden: boolean): Promise<StoredFileItem[]> {
+  memoryFiles = memoryFiles.map((f) => (f.id === id ? { ...f, isHidden } : f));
+  const updated = memoryFiles.find((f) => f.id === id);
+  if (updated) {
+    await putItem('files', updated);
+  }
+  return memoryFiles;
+}
+
+export async function toggleHideApp(id: string, isHidden: boolean): Promise<AppItem[]> {
+  memoryApps = memoryApps.map((a) => (a.id === id ? { ...a, isHidden } : a));
+  const updated = memoryApps.find((a) => a.id === id);
+  if (updated) {
+    await putItem('apps', updated);
+  }
+  return memoryApps;
 }
 
 export async function addContact(contact: ContactItem): Promise<ContactItem[]> {

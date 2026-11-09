@@ -27,6 +27,9 @@ export interface StoredFileItem {
   isCache?: boolean;
   hash?: string;
   meta?: Record<string, any>;
+  isHidden?: boolean;
+  isGame?: boolean;
+  gameType?: 'space_shooter' | 'cyber_runner' | 'brick_breaker';
 }
 
 export interface ContactItem {
@@ -63,6 +66,9 @@ export interface AppItem {
   category: string;
   hasData: boolean;
   dataSize: number;
+  isHidden?: boolean;
+  isGame?: boolean;
+  gameType?: 'space_shooter' | 'cyber_runner' | 'brick_breaker';
 }
 
 export interface DeviceProfile {
@@ -291,4 +297,33 @@ export function resolveVideoPlaybackUrl(file?: {
     return '/videos/konser_live_music.mp4';
   }
   return '/videos/nature_timelapse_4k.mp4';
+}
+
+/**
+ * Safely resolves a working audio playback URL, replacing broken 404/403 endpoints with local verified assets
+ */
+export function resolveAudioPlaybackUrl(file?: {
+  id?: string;
+  name?: string;
+  blobData?: string;
+}): string {
+  if (!file) return '/audio/studio_master_symphony.mp3';
+  if (
+    file.blobData &&
+    !file.blobData.includes('actions.google.com') &&
+    !file.blobData.includes('commondatastorage.googleapis.com')
+  ) {
+    return file.blobData;
+  }
+  const name = file.name || '';
+  if (file.id === 'f6' || name.includes('Studio') || name.includes('Symphony') || name.includes('Flac')) {
+    return '/audio/studio_master_symphony.mp3';
+  }
+  if (file.id === 'f7_b' || name.includes('LoFi') || name.includes('Chill')) {
+    return '/audio/lofi_chill_beats.mp3';
+  }
+  if (file.id === 'f7' || name.includes('Voice') || name.includes('Memo') || name.includes('Meeting')) {
+    return '/audio/voice_memo_meeting.mp3';
+  }
+  return '/audio/studio_master_symphony.mp3';
 }
