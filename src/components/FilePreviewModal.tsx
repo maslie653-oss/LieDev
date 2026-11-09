@@ -11,7 +11,7 @@ import {
   Layers,
   Sparkles,
 } from 'lucide-react';
-import { StoredFileItem, formatBytes } from '../utils/storageEngine';
+import { StoredFileItem, formatBytes, resolveVideoPlaybackUrl } from '../utils/storageEngine';
 
 interface FilePreviewModalProps {
   file: StoredFileItem | null;
@@ -100,11 +100,13 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ file, onClos
           ) : file.category === 'videos' ? (
             <div className="overflow-hidden rounded-2xl border border-purple-500/30 bg-black flex flex-col items-center justify-center">
               <video
-                src={file.blobData || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4'}
+                src={resolveVideoPlaybackUrl(file)}
                 controls
                 playsInline
                 className="max-h-[380px] w-full object-contain"
-              />
+              >
+                Browser Anda tidak mendukung tag video.
+              </video>
             </div>
           ) : file.category === 'audio' ? (
             <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-6 text-center space-y-4">

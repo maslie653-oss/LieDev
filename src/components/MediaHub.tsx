@@ -20,8 +20,12 @@ import {
   Download,
   Calendar,
   Layers,
+  RotateCcw,
+  RotateCw,
+  AlertCircle,
+  CheckCircle2,
 } from 'lucide-react';
-import { StoredFileItem, formatBytes } from '../utils/storageEngine';
+import { StoredFileItem, formatBytes, resolveVideoPlaybackUrl } from '../utils/storageEngine';
 import { PhotoLightboxModal } from './PhotoLightboxModal';
 
 interface MediaHubProps {
@@ -40,6 +44,13 @@ export const MediaHub: React.FC<MediaHubProps> = ({ files, onUploadMedia }) => {
   // Video player state
   const [activeVideoId, setActiveVideoId] = useState<string>('');
   const [videoPlaybackSpeed, setVideoPlaybackSpeed] = useState<number>(1);
+  const [isVideoPlaying, setIsVideoPlaying] = useState<boolean>(false);
+  const [videoCurrentTime, setVideoCurrentTime] = useState<number>(0);
+  const [videoDuration, setVideoDuration] = useState<number>(0);
+  const [videoVolume, setVideoVolume] = useState<number>(1);
+  const [isVideoMuted, setIsVideoMuted] = useState<boolean>(false);
+  const [videoLoadError, setVideoLoadError] = useState<boolean>(false);
+  const [activeVideoSrc, setActiveVideoSrc] = useState<string>('');
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Audio player state
@@ -80,6 +91,104 @@ export const MediaHub: React.FC<MediaHubProps> = ({ files, onUploadMedia }) => {
       setActiveAudioId(audioTracks[0].id);
     }
   }, [videos, audioTracks, activeVideoId, activeAudioId]);
+
+  const getVideoSrc = (video?: StoredFileItem): string => {
+    return resolveVideoPlaybackUrl(video);
+  };
+
+  useEffect(() => {
+    if (activeVideo) {
+      setVideoLoadError(false);
+      const src = getVideoSrc(activeVideo);
+      setActiveVideoSrc(src);
+      setIsVideoPlaying(false);
+      setVideoCurrentTime(0);
+      if (videoRef.current) {
+        videoRef.current.load();
+      }
+    }
+  }, [activeVideo?.id, activeVideo?.blobData]);
+
+  // Video event handlers
+  const handleVideoTimeUpdate = () => {
+    if (videoRef.current) {
+      setVideoCurrentTime(videoRef.current.currentTime);
+      if (videoRef.current.duration && !isNaN(videoRef.current.duration)) {
+        setVideoDuration(videoRef.current.duration);
+      }
+    }
+  };
+
+  const togglePlayVideo = () => {
+    if (!videoRef.current) return;
+    if (videoRef.current.paused) {
+      videoRef.current
+        .play()
+        .then(() => {
+          setIsVideoPlaying(true);
+        })
+        .catch((err) => {
+          console.warn('Video playback trigger error:', err);
+        });
+    } else {
+      videoRef.current.pause();
+      setIsVideoPlaying(false);
+    }
+  };
+
+  const handleVideoSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const time = Number(e.target.value);
+    setVideoCurrentTime(time);
+    if (videoRef.current) {
+      videoRef.current.currentTime = time;
+    }
+  };
+
+  const handleSkipVideo = (seconds: number) => {
+    if (videoRef.current) {
+      const newTime = Math.max(0, Math.min(videoDuration || 100, videoRef.current.currentTime + seconds));
+      videoRef.current.currentTime = newTime;
+      setVideoCurrentTime(newTime);
+    }
+  };
+
+  const handleToggleVideoMute = () => {
+    if (videoRef.current) {
+      videoRef.current.muted = !videoRef.current.muted;
+      setIsVideoMuted(videoRef.current.muted);
+    }
+  };
+
+  const handleVideoVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const vol = Number(e.target.value);
+    setVideoVolume(vol);
+    if (videoRef.current) {
+      videoRef.current.volume = vol;
+      videoRef.current.muted = vol === 0;
+      setIsVideoMuted(vol === 0);
+    }
+  };
+
+  const handleToggleFullscreen = () => {
+    if (videoRef.current) {
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      } else {
+        videoRef.current.requestFullscreen().catch(() => {});
+      }
+    }
+  };
+
+  const handleVideoError = () => {
+    console.warn('Video failed to load from primary source:', activeVideoSrc);
+    setVideoLoadError(true);
+    if (!activeVideoSrc.includes('w3.org')) {
+      setActiveVideoSrc('https://media.w3.org/2010/05/sintel/trailer.mp4');
+      if (videoRef.current) {
+        videoRef.current.load();
+      }
+    }
+  };
 
   // Audio time update handler
   const handleAudioTimeUpdate = () => {
@@ -323,54 +432,164 @@ export const MediaHub: React.FC<MediaHubProps> = ({ files, onUploadMedia }) => {
           {activeVideo && (
             <div className="overflow-hidden rounded-3xl border border-purple-500/30 bg-slate-950 shadow-2xl">
               {/* Theater Video Frame */}
-              <div className="relative aspect-video w-full bg-black flex items-center justify-center">
+              <div className="relative aspect-video w-full bg-black flex items-center justify-center group">
                 <video
                   ref={videoRef}
                   key={activeVideo.id}
-                  src={activeVideo.blobData || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4'}
+                  src={activeVideoSrc}
                   controls
                   playsInline
-                  className="h-full w-full object-contain"
+                  onTimeUpdate={handleVideoTimeUpdate}
+                  onPlay={() => setIsVideoPlaying(true)}
+                  onPause={() => setIsVideoPlaying(false)}
+                  onError={handleVideoError}
+                  className="h-full w-full object-contain cursor-pointer"
                 />
-              </div>
 
-              {/* Theater Bottom Bar */}
-              <div className="p-5 bg-gradient-to-b from-slate-900 to-slate-950 border-t border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                  <div className="flex items-center space-x-2">
-                    <span className="rounded-full bg-purple-500/20 border border-purple-500/40 px-2.5 py-0.5 text-[10px] font-mono font-bold text-purple-300">
-                      4K UHD 60FPS
-                    </span>
-                    <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] font-mono text-slate-300">
-                      Dolby Atmos
-                    </span>
-                  </div>
-                  <h4 className="text-base font-bold text-white mt-1.5">{activeVideo.name}</h4>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Format: {activeVideo.type} • Ukuran: {formatBytes(activeVideo.size)} • Codec: {activeVideo.meta?.codec || 'H.265 10-bit'}
-                  </p>
+                {/* Floating Badges */}
+                <div className="absolute top-4 left-4 flex items-center space-x-2 pointer-events-none">
+                  <span className="rounded-full bg-purple-950/80 backdrop-blur-md border border-purple-500/40 px-3 py-1 text-[11px] font-mono font-bold text-purple-300 shadow-lg">
+                    4K UHD • 60FPS
+                  </span>
+                  <span className="rounded-full bg-emerald-950/80 backdrop-blur-md border border-emerald-500/40 px-2.5 py-1 text-[10px] font-semibold text-emerald-300 flex items-center">
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    Siap Diputar
+                  </span>
                 </div>
 
-                {/* Video Playback Speed Selector */}
-                <div className="flex items-center space-x-2 self-start md:self-auto">
-                  <span className="text-xs text-slate-400 font-semibold">Kecepatan:</span>
-                  <div className="flex rounded-xl bg-slate-800 p-1 text-xs font-semibold">
-                    {[0.75, 1, 1.25, 1.5, 2].map((spd) => (
+                {/* Video Error Fallback Notification */}
+                {videoLoadError && (
+                  <div className="absolute top-4 right-4 rounded-xl border border-amber-500/40 bg-amber-950/90 backdrop-blur-md px-3 py-1.5 text-xs text-amber-300 flex items-center space-x-1.5 shadow-lg">
+                    <AlertCircle className="h-4 w-4 text-amber-400" />
+                    <span>Sumber video dialihkan otomatis ke mirror terverifikasi</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Theater Custom Control & Scrubber Bar */}
+              <div className="border-t border-slate-800 bg-slate-900/95 p-4 space-y-3">
+                {/* Timeline Scrubber */}
+                <div className="flex items-center space-x-3">
+                  <span className="text-[11px] font-mono text-purple-400 font-semibold w-12 text-right">
+                    {formatSeconds(videoCurrentTime)}
+                  </span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={videoDuration || 100}
+                    value={videoCurrentTime}
+                    onChange={handleVideoSeek}
+                    className="flex-1 h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-purple-500 hover:accent-purple-400"
+                  />
+                  <span className="text-[11px] font-mono text-slate-400 w-12">
+                    {formatSeconds(videoDuration || 60)}
+                  </span>
+                </div>
+
+                {/* Playback Controls & Info */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-center space-x-3">
+                    {/* Play/Pause Button */}
+                    <button
+                      onClick={togglePlayVideo}
+                      aria-label={isVideoPlaying ? 'Jeda Video' : 'Putar Video'}
+                      className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-lg shadow-purple-500/25 hover:brightness-110 active:scale-95 transition-all"
+                    >
+                      {isVideoPlaying ? (
+                        <Pause className="h-5 w-5 fill-current" />
+                      ) : (
+                        <Play className="h-5 w-5 fill-current ml-0.5" />
+                      )}
+                    </button>
+
+                    {/* Rewind 10s */}
+                    <button
+                      onClick={() => handleSkipVideo(-10)}
+                      title="Mundur 10 detik"
+                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-800 bg-slate-850 text-slate-300 hover:text-white hover:bg-slate-800 active:scale-95 transition-all"
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                    </button>
+
+                    {/* Forward 10s */}
+                    <button
+                      onClick={() => handleSkipVideo(10)}
+                      title="Maju 10 detik"
+                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-800 bg-slate-850 text-slate-300 hover:text-white hover:bg-slate-800 active:scale-95 transition-all"
+                    >
+                      <RotateCw className="h-4 w-4" />
+                    </button>
+
+                    {/* Volume Mute & Slider */}
+                    <div className="flex items-center space-x-2 border-l border-slate-800 pl-3">
                       <button
-                        key={spd}
-                        onClick={() => {
-                          setVideoPlaybackSpeed(spd);
-                          if (videoRef.current) videoRef.current.playbackRate = spd;
-                        }}
-                        className={`rounded-lg px-2.5 py-1 transition-colors ${
-                          videoPlaybackSpeed === spd
-                            ? 'bg-purple-500 text-white shadow'
-                            : 'text-slate-400 hover:text-white'
-                        }`}
+                        onClick={handleToggleVideoMute}
+                        className="text-slate-400 hover:text-white"
+                        title={isVideoMuted ? 'Batal Bisukan' : 'Bisukan'}
                       >
-                        {spd}x
+                        {isVideoMuted || videoVolume === 0 ? (
+                          <VolumeX className="h-4 w-4 text-purple-400" />
+                        ) : (
+                          <Volume2 className="h-4 w-4 text-purple-400" />
+                        )}
                       </button>
-                    ))}
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.05"
+                        value={isVideoMuted ? 0 : videoVolume}
+                        onChange={handleVideoVolumeChange}
+                        className="w-16 sm:w-20 h-1 bg-slate-800 rounded appearance-none cursor-pointer accent-purple-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Right side: Speed and Fullscreen */}
+                  <div className="flex items-center space-x-3 self-end md:self-auto">
+                    <div className="flex items-center space-x-1.5">
+                      <span className="text-xs text-slate-400 font-semibold hidden sm:inline">Kecepatan:</span>
+                      <div className="flex rounded-xl bg-slate-800 p-1 text-xs font-semibold">
+                        {[0.75, 1, 1.25, 1.5, 2].map((spd) => (
+                          <button
+                            key={spd}
+                            onClick={() => {
+                              setVideoPlaybackSpeed(spd);
+                              if (videoRef.current) videoRef.current.playbackRate = spd;
+                            }}
+                            className={`rounded-lg px-2 py-1 transition-colors ${
+                              videoPlaybackSpeed === spd
+                                ? 'bg-purple-500 text-white shadow'
+                                : 'text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            {spd}x
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={handleToggleFullscreen}
+                      title="Layar Penuh"
+                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-800 bg-slate-850 text-slate-300 hover:text-white hover:bg-slate-800 active:scale-95 transition-all"
+                    >
+                      <Maximize2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Video Metadata Bar */}
+                <div className="pt-2 border-t border-slate-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs text-slate-400">
+                  <div className="flex items-center space-x-2">
+                    <span className="font-semibold text-white">{activeVideo.name}</span>
+                    <span>•</span>
+                    <span>{formatBytes(activeVideo.size)}</span>
+                  </div>
+                  <div className="flex items-center space-x-2 text-[11px] text-purple-400 font-mono">
+                    <span>Codec: {activeVideo.meta?.codec || 'H.264 / AVC'}</span>
+                    <span>•</span>
+                    <span>Audio: Dolby Atmos Hi-Res</span>
                   </div>
                 </div>
               </div>

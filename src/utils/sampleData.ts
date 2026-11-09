@@ -151,7 +151,7 @@ export const INITIAL_FILES: StoredFileItem[] = [
     meta: { resolution: '6144 x 4096', camera: 'Periscope Zoom 10x Optical', iso: '100', album: 'Kamera', favorite: true },
   },
 
-  // VIDEOS (Using official playable high-definition streaming Google Cloud Video assets)
+  // VIDEOS (Using verified playable high-definition local and CDN video assets)
   {
     id: 'f4',
     name: 'VID_20261102_Cinematic_Drone_4K60FPS.mp4',
@@ -159,8 +159,8 @@ export const INITIAL_FILES: StoredFileItem[] = [
     type: 'video/mp4',
     category: 'videos',
     createdAt: Date.now() - 1000 * 60 * 60 * 120,
-    blobData: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-    meta: { duration: '08:42', codec: 'H.265 / HEVC 10-bit', fps: 60, bitrate: '45 Mbps', resolution: '3840 x 2160' },
+    blobData: '/videos/drone_ocean_cinematic.mp4',
+    meta: { duration: '00:52', codec: 'H.264 / AVC 1080p', fps: 60, bitrate: '45 Mbps', resolution: '1920 x 1080' },
   },
   {
     id: 'f5',
@@ -169,8 +169,8 @@ export const INITIAL_FILES: StoredFileItem[] = [
     type: 'video/mp4',
     category: 'videos',
     createdAt: Date.now() - 1000 * 60 * 60 * 200,
-    blobData: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-    meta: { duration: '14:15', codec: 'ProRes HDR', audio: 'Dolby Atmos Spatial', resolution: '1920 x 1080' },
+    blobData: '/videos/konser_live_music.mp4',
+    meta: { duration: '00:15', codec: 'H.264 High-Profile', audio: 'Dolby Atmos Spatial', resolution: '1280 x 720' },
   },
   {
     id: 'f5_b',
@@ -179,8 +179,8 @@ export const INITIAL_FILES: StoredFileItem[] = [
     type: 'video/mp4',
     category: 'videos',
     createdAt: Date.now() - 1000 * 60 * 60 * 260,
-    blobData: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
-    meta: { duration: '10:53', codec: 'AV1 High-Profile', audio: 'Stereo Hi-Res 96kHz', resolution: '3840 x 2160' },
+    blobData: '/videos/nature_timelapse_4k.mp4',
+    meta: { duration: '00:10', codec: 'H.264 UHD', audio: 'Stereo Hi-Res 96kHz', resolution: '1920 x 1080' },
   },
 
   // AUDIO & MUSIC

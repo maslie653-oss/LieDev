@@ -6,6 +6,7 @@ import {
   analyzeStorageOptimization,
   calculateTransferMetrics,
   validateBackupSchema,
+  resolveVideoPlaybackUrl,
   TOTAL_MEGA_STORAGE_BYTES,
   StoredFileItem,
 } from './storageEngine';
@@ -128,4 +129,30 @@ test('validateBackupSchema correctly identifies valid and invalid packages', () 
   assert.equal(validation.valid, true);
   assert.equal(validation.metadata?.contactCount, 1);
   assert.equal(validation.metadata?.fileCount, 1);
+});
+
+test('resolveVideoPlaybackUrl provides verified fallback for broken 403 endpoints', () => {
+  // Test replacing broken commondatastorage.googleapis.com
+  const brokenVideo = {
+    id: 'f4',
+    name: 'VID_20261102_Cinematic_Drone_4K60FPS.mp4',
+    blobData: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+  };
+  assert.equal(resolveVideoPlaybackUrl(brokenVideo), '/videos/drone_ocean_cinematic.mp4');
+
+  // Test concert video
+  const concertVideo = {
+    id: 'f5',
+    name: 'VID_20261028_Konser_Live_Dolby_Atmos.mp4',
+    blobData: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+  };
+  assert.equal(resolveVideoPlaybackUrl(concertVideo), '/videos/konser_live_music.mp4');
+
+  // Test real user upload preserves valid blobData
+  const uploadedVideo = {
+    id: 'upload_1',
+    name: 'my_vacation.mp4',
+    blobData: 'blob:http://localhost:3000/123-abc-video',
+  };
+  assert.equal(resolveVideoPlaybackUrl(uploadedVideo), 'blob:http://localhost:3000/123-abc-video');
 });

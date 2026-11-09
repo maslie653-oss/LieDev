@@ -17,7 +17,7 @@ export interface CloneSessionLog {
   status: 'completed' | 'cancelled' | 'in_progress';
 }
 
-function openDB(): Promise<IDBDatabase> {
+export function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     if (typeof window === 'undefined' || !window.indexedDB) {
       reject(new Error('IndexedDB tidak didukung pada lingkungan ini'));
@@ -87,7 +87,31 @@ export async function initStorage(): Promise<{
     // Check files
     const storedFiles = await getAllFromStore<StoredFileItem>(db, 'files');
     if (storedFiles.length > 0) {
-      memoryFiles = storedFiles;
+      // Auto-migrate broken 403 video URLs to local verified MP4 assets
+      let hasMigrated = false;
+      const updatedFiles = storedFiles.map((file) => {
+        if (
+          file.category === 'videos' &&
+          (!file.blobData || file.blobData.includes('commondatastorage.googleapis.com/gtv-videos-bucket'))
+        ) {
+          hasMigrated = true;
+          if (file.id === 'f4' || file.name.includes('Drone') || file.name.includes('VID_20261102')) {
+            return { ...file, blobData: '/videos/drone_ocean_cinematic.mp4' };
+          } else if (file.id === 'f5' || file.name.includes('Konser') || file.name.includes('VID_20261028')) {
+            return { ...file, blobData: '/videos/konser_live_music.mp4' };
+          } else {
+            return { ...file, blobData: '/videos/nature_timelapse_4k.mp4' };
+          }
+        }
+        return file;
+      });
+
+      if (hasMigrated) {
+        await putAllToStore(db, 'files', updatedFiles);
+        memoryFiles = updatedFiles;
+      } else {
+        memoryFiles = storedFiles;
+      }
     } else {
       // Seed default files
       await putAllToStore(db, 'files', INITIAL_FILES);

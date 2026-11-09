@@ -32,7 +32,14 @@ import { BackupRestoreModal } from './components/BackupRestoreModal';
 import { FilePreviewModal } from './components/FilePreviewModal';
 import { MediaHub } from './components/MediaHub';
 import { GoogleSyncModal } from './components/GoogleSyncModal';
+import { FacebookLoginModal } from './components/FacebookLoginModal';
 import { initAuth } from './utils/googleAuth';
+import {
+  FacebookUserProfile,
+  initFacebookAuth,
+  onFacebookAuthStateChanged,
+} from './utils/facebookAuth';
+import { saveFacebookCloudBackup } from './utils/facebookCloudVault';
 import { User } from 'firebase/auth';
 import {
   HardDrive,
@@ -82,6 +89,8 @@ export default function App() {
 
   // Auth state
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [facebookUser, setFacebookUser] = useState<FacebookUserProfile | null>(null);
+  const [isFacebookLoginOpen, setIsFacebookLoginOpen] = useState(false);
 
   // Toast notification
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -113,10 +122,37 @@ export default function App() {
       () => setCurrentUser(null)
     );
 
+    // Subscribe to Facebook Auth
+    const initialFbUser = initFacebookAuth();
+    if (initialFbUser) {
+      setFacebookUser(initialFbUser);
+    }
+    const unsubFb = onFacebookAuthStateChanged((fbUser) => {
+      setFacebookUser(fbUser);
+    });
+
     return () => {
       unsubAuth();
+      unsubFb();
     };
   }, []);
+
+  // Auto-backup to Facebook Cloud Vault if user is logged in
+  useEffect(() => {
+    if (!isLoading && facebookUser) {
+      try {
+        saveFacebookCloudBackup(facebookUser, {
+          files,
+          contacts,
+          messages,
+          apps,
+          profile,
+        });
+      } catch (err) {
+        console.error('Auto backup Facebook error:', err);
+      }
+    }
+  }, [files, contacts, messages, apps, profile, facebookUser, isLoading]);
 
   // Show temporary toast
   const showToast = (msg: string) => {
@@ -149,13 +185,21 @@ export default function App() {
       else if (file.name.endsWith('.apk') || file.type.includes('package-archive')) cat = 'apps';
       else if (file.name.endsWith('.bin') || file.name.endsWith('.tmp')) cat = 'system';
 
-      // Read as Data URL for preview if image or audio or small file
+      // Read as Data URL or Object URL for preview if image, audio, or video
       let blobUrl = '';
-      if (file.type.startsWith('image/') || file.type.startsWith('audio/')) {
+      if (file.type.startsWith('image/') || file.type.startsWith('audio/') || file.type.startsWith('video/')) {
         try {
-          blobUrl = await readFileAsDataUrl(file);
+          if (file.size < 60 * 1024 * 1024) {
+            blobUrl = await readFileAsDataUrl(file);
+          } else {
+            blobUrl = URL.createObjectURL(file);
+          }
         } catch {
-          blobUrl = '';
+          try {
+            blobUrl = URL.createObjectURL(file);
+          } catch {
+            blobUrl = '';
+          }
         }
       }
 
@@ -286,10 +330,12 @@ export default function App() {
         totalCapacityFormatted="5.0 TB"
         usedPercentage={usedPercentage}
         currentUser={currentUser}
+        facebookUser={facebookUser}
         onOpenCloneWizard={() => setIsCloneWizardOpen(true)}
         onOpenCleaner={() => setIsCleanerOpen(true)}
         onOpenBackupRestore={() => setIsBackupRestoreOpen(true)}
         onOpenGoogleSync={() => setIsGoogleSyncOpen(true)}
+        onOpenFacebookLogin={() => setIsFacebookLoginOpen(true)}
       />
 
       {/* Main Container */}
@@ -487,6 +533,27 @@ export default function App() {
           setMessages(restored.messages);
           setApps(restored.apps);
           showToast('Data berhasil dipulihkan dari Google Drive!');
+        }}
+        showToast={showToast}
+      />
+
+      <FacebookLoginModal
+        isOpen={isFacebookLoginOpen}
+        onClose={() => setIsFacebookLoginOpen(false)}
+        files={files}
+        contacts={contacts}
+        messages={messages}
+        apps={apps}
+        profile={profile}
+        onRestoreCompleted={(restored) => {
+          setFiles(restored.files);
+          setContacts(restored.contacts);
+          setMessages(restored.messages);
+          setApps(restored.apps);
+          if (restored.profile) {
+            setProfile(restored.profile);
+          }
+          showToast('Seluruh file & data 5 TB berhasil dipulihkan dari akun Facebook!');
         }}
         showToast={showToast}
       />

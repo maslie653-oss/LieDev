@@ -22,10 +22,12 @@ interface HeaderProps {
   totalCapacityFormatted: string;
   usedPercentage: number;
   currentUser?: User | null;
+  facebookUser?: any | null;
   onOpenCloneWizard: () => void;
   onOpenCleaner: () => void;
   onOpenBackupRestore: () => void;
   onOpenGoogleSync: () => void;
+  onOpenFacebookLogin: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -34,10 +36,12 @@ export const Header: React.FC<HeaderProps> = ({
   totalCapacityFormatted,
   usedPercentage,
   currentUser,
+  facebookUser,
   onOpenCloneWizard,
   onOpenCleaner,
   onOpenBackupRestore,
   onOpenGoogleSync,
+  onOpenFacebookLogin,
 }) => {
   return (
     <header className="sticky top-0 z-30 border-b border-cyan-500/20 bg-slate-950/85 backdrop-blur-md">
@@ -139,6 +143,35 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="hidden sm:inline">Bersihkan</span>
           </button>
 
+          {/* Facebook Exclusive Anti-Reset Cloud Vault Login Button */}
+          <button
+            onClick={onOpenFacebookLogin}
+            aria-label="Login Akun Facebook Anti Reset HP"
+            className={`flex items-center space-x-1.5 rounded-xl border px-3 py-2 text-xs font-semibold shadow-md active:scale-95 transition-all ${
+              facebookUser
+                ? 'border-blue-500/50 bg-blue-950/40 text-blue-300 hover:bg-blue-900/50'
+                : 'border-[#1877F2]/60 bg-[#1877F2] text-white hover:bg-[#166fe5] shadow-blue-500/20'
+            }`}
+          >
+            {facebookUser?.avatarUrl ? (
+              <img
+                src={facebookUser.avatarUrl}
+                alt="Facebook User"
+                className="h-3.5 w-3.5 rounded-full ring-1 ring-white/50 object-cover"
+              />
+            ) : (
+              <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-white text-[#1877F2] font-black text-[10px]">
+                f
+              </span>
+            )}
+            <span className="hidden sm:inline">
+              {facebookUser ? (facebookUser.name?.split(' ')[0] || 'Facebook') : 'Masuk Facebook'}
+            </span>
+            <span className="hidden xl:inline text-[10px] opacity-80">
+              {facebookUser ? '(Aman Reset HP)' : '(Anti-Reset HP)'}
+            </span>
+          </button>
+
           {/* Google Workspace Smart Sync Button */}
           <button
             onClick={onOpenGoogleSync}
@@ -154,8 +187,8 @@ export const Header: React.FC<HeaderProps> = ({
             ) : (
               <Cloud className="h-3.5 w-3.5 text-cyan-400" />
             )}
-            <span className="hidden sm:inline">
-              {currentUser ? (currentUser.displayName?.split(' ')[0] || 'Google') : 'Sinkron Google'}
+            <span className="hidden md:inline">
+              {currentUser ? (currentUser.displayName?.split(' ')[0] || 'Google') : 'Google Sync'}
             </span>
           </button>
 
